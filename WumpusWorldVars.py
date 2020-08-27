@@ -1,0 +1,9 @@
+BREEZE = 0
+PIT = 1
+STENCH = 2
+WUMPUS = 4
+GOLD = 5
+GLITTER = "glitter"
+SAFE = "safe"
+HUNTER = "hunter"
+img_size = [75, 75]
