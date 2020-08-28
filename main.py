@@ -10,10 +10,12 @@
 import sys
 from os import path
 from WumpusWorld import WumpusWorld
+from WumpusWorldVars import GAMEINFO
 
 
 def main():
-    world = WumpusWorld(10)
+    ginfo = GAMEINFO("4x4.txt")
+    world = WumpusWorld(ginfo)
 
     x = 0
     y = 0

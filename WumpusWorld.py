@@ -4,146 +4,142 @@ from secrets import randbelow
 from PIL import Image, ImageTk
 
 import numpy as np
-import WumpusWorldVars as wv
+from WumpusWorldVars import GAMEINFO, PERCEPT
 
 
 class WumpusWorld:
-    def __init__(self, dim):
-        self.__dim = dim
-        self.__app = tk.Tk()
+    def __init__(self, ginfo: GAMEINFO):
+        self.__info = ginfo
+        self.__tk = tk.Tk()
+        # TONDO doc map (doc o utils, them tham so la vi tri wum/gold gi gi do)
 
-        # insert Buttons
-        self.startButton = tk.Button(self.__app, text="run", command="")
-        self.startButton.grid_propagate(0)
-        self.startButton.grid(pady=10, padx=5, row=0, column=0)
-
-        self.stepButton = tk.Button(self.__app, text="step", command=self.step)
+        self.stepButton = tk.Button(self.__tk, text="run", command=self.__loop)
         self.stepButton.grid_propagate(0)
-        self.stepButton.grid(pady=10, padx=5, row=0, column=1)
+        self.stepButton.grid(pady=10, padx=5, row=0, column=0)
 
-        self.resetButton = tk.Button(self.__app, text="reset", command=self.resetWorld)
+        self.resetButton = tk.Button(self.__tk, text="reset", command=self.__resetWorld)
         self.resetButton.grid_propagate(0)
-        self.resetButton.grid(pady=10, padx=5, row=0, column=2)
+        self.resetButton.grid(pady=10, padx=5, row=0, column=1)
 
-        self.quitButton = tk.Button(self.__app, text="quit", command=self.__app.quit)
+        self.quitButton = tk.Button(self.__tk, text="quit", command=self.__tk.quit)
         self.quitButton.grid_propagate(0)
-        self.quitButton.grid(pady=10, padx=5, row=0, column=3)
+        self.quitButton.grid(pady=10, padx=5, row=0, column=2)
+        # TODO change KB type button
 
         self.__onInit()
 
     def __onInit(self):
-        # insert container frame
-        size = self.__dim * 90
-        self.container = tk.Frame(
-            self.__app, width=size, height=size + 10, bg="#ffffff"
+        wsize = self.__info.size * 90
+        self.__container = tk.Frame(
+            self.__tk, width=wsize, height=wsize + 10, bg="#ffffff"
         )
-        self.container.grid_propagate(0)
-        self.container.grid(row=1, columnspan=5, pady=5, padx=5)
+        self.__container.grid_propagate(0)
+        self.__container.grid(row=1, columnspan=5, pady=5, padx=5)
 
         # create images
         self.__loadImgs()
-        self.createWidgets(self.container)
-        self.initWorld()
-        self.__app.mainloop()
+        self.__createWidgets()
+        self.__initWorld()
+        self.__tk.mainloop()
 
-    def resetWorld(self):
-        self.container.grid_remove()
+    def __resetWorld(self):
+        # TONDO right edge (khong di qua__placeHunter phai duoc)
+        self.__container.grid_remove()
         self.__onInit()
 
-    def getCell(self, x, y):
-        return self.__percepts[x][y]
+    def __placeHunter(self, apos):
+        # self.__hunterPos = [x, y]
+        self.__insertWidget(apos[0], apos[1], self.__info.HUNTER)
 
-    def __placeHunter(self, x, y):
-        self.hunterLoc = [x, y]
-        self.__updateImg(x, y, wv.HUNTER)
+    def __placeGold(self):
+        for x, y in self.__info.gold:
+            self.__percepts[x][y][PERCEPT.GOLD] = True
+            self.__insertWidget(x, y, PERCEPT.GOLD)
 
-    def placeGold(self):
-        x, y = randbelow(self.__dim), randbelow(self.__dim)
-        self.__percepts[x][y] = wv.GOLD
-        self.__updateImg(x, y, wv.GOLD)
-
-    def placeWumpus(self):
+    def __placeWumpus(self):
         # TONDO n wumpus
-        x, y = randbelow(self.__dim), randbelow(self.__dim)
-        self.__percepts[x][y] = wv.WUMPUS
-        self.__insertAdjs(x, y, wv.STENCH)
-        self.__updateImg(x, y, wv.WUMPUS)
+        for x, y in self.__info.wumpus:
+            self.__percepts[x][y][PERCEPT.WUMPUS] = True
+            self.__insertAdjs(x, y, PERCEPT.STENCH)
+            self.__insertWidget(x, y, PERCEPT.WUMPUS)
 
-    def placePit(self):
-        for _ in range(self.__dim - 2):
-            x, y = randbelow(self.__dim), randbelow(self.__dim)
-            self.__percepts[x][y] = wv.PIT
-            self.__insertAdjs(x, y, wv.BREEZE)
-            self.__updateImg(x, y, wv.PIT)
+    def __placePit(self):
+        for x, y in self.__info.pit:
+            self.__percepts[x][y][PERCEPT.PIT] = True
+            self.__insertAdjs(x, y, PERCEPT.BREEZE)
+            self.__insertWidget(x, y, PERCEPT.PIT)
 
     def __insertAdjs(self, x, y, val):
         pass
-        # TONDO
+        # TONDO pit thi ke no co breeze, wum thi co S
 
-    def __updateImg(self, x, y, obj):
-        self.__insertWidget(x, y, obj)
-
-    def createWidgets(self, container):
-        for i in range(self.__dim):
-            for j in range(self.__dim):
-                tk.LabelFrame(container, height=90, width=90, bg="#ffffff").grid(
+    def __createWidgets(self):
+        for i in range(self.__info.size):
+            for j in range(self.__info.size):
+                tk.LabelFrame(self.__container, height=90, width=90, bg="#ffffff").grid(
                     row=i, column=j
                 )
 
     def __loadImgs(self):
+        imgSize = self.__info.IMGSIZE
         wumpus_img = Image.open(path.join("media", "wumpus.gif"))
-        wumpus_img.thumbnail(wv.img_size, Image.ANTIALIAS)
-        self.wumpus_img = ImageTk.PhotoImage(wumpus_img)
+        wumpus_img.thumbnail(imgSize, Image.ANTIALIAS)
+        self.__wimg = ImageTk.PhotoImage(wumpus_img)
         # create pit image
         pit_img = Image.open(path.join("media", "pit.gif"))
-        pit_img.thumbnail(wv.img_size, Image.ANTIALIAS)
-        self.pit_img = ImageTk.PhotoImage(pit_img)
+        pit_img.thumbnail(imgSize, Image.ANTIALIAS)
+        self.__pimg = ImageTk.PhotoImage(pit_img)
         # create gold image
         gold_img = Image.open(path.join("media", "gold.gif"))
-        gold_img.thumbnail(wv.img_size, Image.ANTIALIAS)
-        self.gold_img = ImageTk.PhotoImage(gold_img)
+        gold_img.thumbnail(imgSize, Image.ANTIALIAS)
+        self.__gimg = ImageTk.PhotoImage(gold_img)
         # create gold image
         hunter_img = Image.open(path.join("media", "hunter.gif"))
-        hunter_img.thumbnail(wv.img_size, Image.ANTIALIAS)
-        self.hunter_img = ImageTk.PhotoImage(hunter_img)
+        hunter_img.thumbnail(imgSize, Image.ANTIALIAS)
+        self.__aimg = ImageTk.PhotoImage(hunter_img)
 
-    def __insertWidget(self, x, y, type):
-        if type == wv.HUNTER:
+    def __insertWidget(self, mx, my, type):
+        cellSize = 75
+        x = self.__info.size - 1 - my
+        y = mx
+        if type == self.__info.HUNTER:
             self.__visualGrid[x][y] = tk.Label(
-                self.container, height=75, width=75, image=self.hunter_img
+                self.__container, height=cellSize, width=cellSize, image=self.__aimg
             )
             self.__visualGrid[x][y].grid(row=x, column=y)
-        elif type == wv.WUMPUS:
+        elif type == PERCEPT.WUMPUS:
             self.__visualGrid[x][y] = tk.Label(
-                self.container, height=75, width=75, image=self.wumpus_img
+                self.__container, height=cellSize, width=cellSize, image=self.__wimg
             )
             self.__visualGrid[x][y].grid(row=x, column=y)
-        elif type == wv.PIT:
+        elif type == PERCEPT.PIT:
             self.__visualGrid[x][y] = tk.Label(
-                self.container, height=75, width=75, image=self.pit_img
+                self.__container, height=cellSize, width=cellSize, image=self.__pimg
             )
             self.__visualGrid[x][y].grid(row=x, column=y)
-        elif type == wv.GOLD:
+        elif type == PERCEPT.GOLD:
             self.__visualGrid[x][y] = tk.Label(
-                self.container, height=75, width=75, image=self.gold_img
+                self.__container, height=cellSize, width=cellSize, image=self.__gimg
             )
             self.__visualGrid[x][y].grid(row=x, column=y)
 
-    def initWorld(self):
-        dim = self.__dim
+    def __initWorld(self):
+        dim = self.__info.size
         self.__percepts = np.full((dim, dim, 5), False)
         self.__visualGrid = [[0] * dim] * dim
 
-        self.placeGold()
-        self.placePit()
-        self.placeWumpus()
-        self.__placeHunter(0, 0)
-        # TONDO random thang tren, o ben phai no phai an toan
+        self.__placeGold()
+        self.__placePit()
+        self.__placeWumpus()
+        self.__placeHunter(self.__info.agent)
+        # TONDO init, o ben phai (hoac huong no di duoc) phai safe
 
-    def step(self):
-        x = self.hunterLoc[0]
-        y = self.hunterLoc[1]
-        self.__visualGrid[x][y].grid_remove()
-        self.__visualGrid[x][y] = None
-        self.__placeHunter(x + 1, y + 1)
-        # TODO
+    def __loop(self):
+        # TODO died
+        pass
+
+    def getPercept(self, x, y):
+        return self.__percepts[x][y]
+
+    def getNeighbors(self, x, y):
+        return self.__info.getNeighbors(x, y)
