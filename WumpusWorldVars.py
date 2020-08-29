@@ -8,7 +8,7 @@ class PERCEPT:
     WUMPUS = 3
     GOLD = 4
 
-    ACRONYM = {"B": BREEZE, "P": PIT, "S": STENCH, "W": WUMPUS, "G": GOLD}
+    ACRONYM = {"B": BREEZE, "P": PIT, "S": STENCH, "W": WUMPUS}
 
 
 class ACTION:
@@ -76,18 +76,18 @@ class GAMEINFO:
                 temp.clear()
         return (n, pit, breeze, wumpus, stench, gold, agent)
 
-    def getNeighbors(self, x, y):
-        def validPos(x, y):
-            return 0 < x and 0 < y and x < self.size and y < self.size
+    def validPos(self, x, y):
+        return 0 <= x and 0 <= y and x < self.size and y < self.size
 
+    def getNeighbors(self, x, y):
         neighbors = []
         for dx, dy in DIRECTION.POS2DIR.keys():
             nx, ny = x + dx, y + dy
-            if validPos(nx, ny):
+            if self.validPos(nx, ny):
                 neighbors.append((nx, ny))
         return neighbors
 
 
 def pos2num(x, y, character):
-    assert character in ("B", "P", "S", "W")
+    assert character in PERCEPT.ACRONYM.keys()
     return PERCEPT.ACRONYM[character] * 100 + y * 10 + x + 1

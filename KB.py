@@ -1,4 +1,8 @@
+import numpy as np
+from itertools import product
+from pysat.formula import CNF
 from pysat.solvers import Glucose4
+
 from WumpusWorldVars import GAMEINFO, pos2num
 
 
@@ -6,13 +10,19 @@ class KB_PL:
     def __init__(self, ginfo: GAMEINFO):
         self.__solver = Glucose4()
         self.__info = ginfo
-        self.__clauses = self.__initClauses("B", "P") + self.__initClauses("S", "W")
+        initSentences = self.__initClauses("B", "P") + self.__initClauses("S", "W")
+        self.__solver.append_formula(initSentences)
 
-    def tell(self, clause):
-        pass
+    def __del__(self):
+        self.__solver.delete()
 
-    def ask(self, clause):
-        pass
+    def tell(self, sentence):
+        self.__solver.append_formula(sentence)
+
+    def ask(self, sentence):
+        neg = KB_PL.__negate(sentence)
+        query = self.__solver.solve(assumptions=neg)
+        return not query if query != None else None
 
     def __initClauses(self, c1, c2):
         cnf_clauses = []
@@ -21,11 +31,16 @@ class KB_PL:
             for y in range(size):
                 lhs = pos2num(x, y, c1)
                 rhs = [pos2num(ix, iy, c2) for ix, iy in self.__info.getNeighbors(x, y)]
-                cnf_clauses.append(self.__biconditional2cnf(lhs, rhs))
+                cnf_clauses += KB_PL.biconditional2cnf(lhs, rhs)
         return cnf_clauses
 
-    def __biconditional2cnf(self, lhs: int, rhs: list):
-        res = [[-lhs] + list(rhs)]
+    @staticmethod
+    def __negate(sentence):
+        return -np.array(list(product(*sentence)))
+
+    @staticmethod
+    def biconditional2cnf(lhs: int, rhs: list):
+        res = [[-lhs] + rhs]
         for symbol in rhs:
             res.append([-symbol, lhs])
         return res

@@ -9,34 +9,27 @@
 
 import sys
 from os import path
+
+import tkinter as tk
+
+from Agents import Agent
 from WumpusWorld import WumpusWorld
 from WumpusWorldVars import GAMEINFO
 
 
-def main():
+if __name__ == "__main__":
+    gui = tk.Tk()
     ginfo = GAMEINFO("4x4.txt")
-    world = WumpusWorld(ginfo)
+    world = WumpusWorld(gui, ginfo)
+    agent = Agent(world)
 
-    x = 0
-    y = 0
-    # cell1 = world.getCell(x, y)
-    # print cell1.toString()
-    #
-    # #to right
-    # cell2 = world.getCell(x+1,y);
-    # print 'right: '+cell2.toString()
-    #
-    # #to left
-    # cell2 = world.getCell(x-1,y);
-    # print 'left: '+cell2.toString()
-    #
-    # # top of
-    # cell2 = world.getCell(x,y+1);
-    # print 'top: '+cell2.toString()
-    #
-    # #botom of
-    # cell2 = world.getCell(x,y-1);
-    # print 'bottom: '+cell2.toString()
+    stepButton = tk.Button(gui, text="run", command=agent.startGame)
+    stepButton.grid_propagate(0)
+    stepButton.grid(pady=10, padx=5, row=0, column=0)
 
+    resetButton = tk.Button(gui, text="reset", command=world.reset)
+    resetButton.grid_propagate(0)
+    resetButton.grid(pady=10, padx=5, row=0, column=1)
 
-main()
+    gui.mainloop()
+    # TODO change KB type button
