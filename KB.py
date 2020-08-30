@@ -1,6 +1,5 @@
 import numpy as np
 from itertools import product
-from pysat.formula import CNF
 from pysat.solvers import Glucose4
 
 from WumpusWorldVars import GAMEINFO, pos2num
@@ -21,8 +20,10 @@ class KB_PL:
 
     def ask(self, sentence):
         neg = KB_PL.__negate(sentence)
-        query = self.__solver.solve(assumptions=neg)
-        return not query if query != None else None
+        for clause in neg:
+            if self.__solver.solve(assumptions=clause) == False:
+                return True
+        return False
 
     def __initClauses(self, c1, c2):
         cnf_clauses = []
@@ -36,7 +37,10 @@ class KB_PL:
 
     @staticmethod
     def __negate(sentence):
-        return -np.array(list(product(*sentence)))
+        if isinstance(sentence, int):
+            return [[-sentence]]
+        neg = -np.array(list(product(*sentence)))
+        return neg.tolist()
 
     @staticmethod
     def biconditional2cnf(lhs: int, rhs: list):

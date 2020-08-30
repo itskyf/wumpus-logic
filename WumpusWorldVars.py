@@ -7,6 +7,7 @@ class PERCEPT:
     STENCH = 2
     WUMPUS = 3
     GOLD = 4
+    AGENT = 5
 
     ACRONYM = {"B": BREEZE, "P": PIT, "S": STENCH, "W": WUMPUS}
 
@@ -42,7 +43,6 @@ class GAMEINFO:
         self.agent = tmp[6]
 
         GAMEINFO.SAFE = "safe"
-        GAMEINFO.HUNTER = "hunter"
         GAMEINFO.IMGSIZE = (75, 75)
 
     def __loadmap(self, fname):

@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-# Wumpus world [5][5]
-# [0][0] = start point, no pits
-# breeze on adject sqaure of pits
-# 1 square has a gorl bar
-# 1 sqaure has wumpus
-# can shoot a wumpus only if wumpus is facing you
-# move left right forward
 
 import sys
 from os import path
@@ -23,7 +16,7 @@ if __name__ == "__main__":
     world = WumpusWorld(gui, ginfo)
     agent = Agent(world)
 
-    stepButton = tk.Button(gui, text="run", command=agent.startGame)
+    stepButton = tk.Button(gui, text="continue", command=agent.startGame)
     stepButton.grid_propagate(0)
     stepButton.grid(pady=10, padx=5, row=0, column=0)
 

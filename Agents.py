@@ -16,9 +16,6 @@ class Agent:
         self.__kb = KB_PL(self.__info)
         # TODO KBFOL
 
-        self.__safe = set()
-        self.__doubt = set()
-        self.__danger = set()
         self.__visited = np.full((self.__info.size, self.__info.size), False)
 
         self.__dir = DIRECTION.RIGHT
@@ -26,21 +23,32 @@ class Agent:
         # TODO canh phai khong foward duoc
 
         self.__x, self.__y = self.__info.agent
-        self.__nbVisited = 0
+        self.__visited[self.__x][self.__y] = True
+        self.__safe = set(self.__info.getNeighbors(self.__x, self.__y))
+        self.__doubt = set()
+        self.__danger = set()
 
-    def startGame(self):
-        while self.__alive:
+    def startGame(self, debug=True):
+        if self.__alive:
             action = (
                 self.__actionQueue.pop()
                 if len(self.__actionQueue) > 0
-                else self.__newActions()
+                else self.__planning()
             )
-            print("---")
-            print("Safe\t:", self.__safe)
-            print("Fringe\t:", self.__doubt)
-            print("Danger\t:", self.__danger)
             self.__perform(action)
-            print("Action: %s" % action)
+            print("---")
+            if debug:
+                if action[0] != ACTION.ROTATE:
+                    print("Pos:\t", self.__x, self.__y)
+                    print("Dir:\t", self.__dir)
+                    print("Safe:\t", self.__safe)
+                    print("Doubt:\t", self.__doubt)
+                    print("Danger:\t", self.__danger)
+                    print("Action:\t", action)
+                    print("ActionQ:\t", self.__actionQueue)
+                else:
+                    print("Rotate:\t", self.__dir)
+
             self.__alive = self.__world.doAction(action)
 
     def __perform(self, action):
@@ -53,10 +61,7 @@ class Agent:
 
             if not self.__visited[nx][ny]:
                 self.__visited[nx][ny] = True
-                self.__nbVisited += 1
                 percept = self.__world.getPercept(nx, ny)
-                # ev = event.PlayerPerceiveEvent(percept)
-                # self.ev_manager.post(ev)
 
                 if (nx, ny) in self.__safe:
                     self.__safe.remove((nx, ny))
@@ -75,42 +80,61 @@ class Agent:
                 self.__explore(nx, ny, percept)
 
     def __explore(self, x, y, percept):
-        nCell = set(self.__info.getNeighbors(x, y)) - self.__safe - self.__danger
-        nSafe = set()
-        nDanger = set()
+        neighbors = (
+            set(
+                [
+                    p
+                    for p in self.__info.getNeighbors(x, y)
+                    if not self.__visited[p[0]][p[1]]
+                ]
+            )
+            - self.__safe
+            - self.__danger
+        )
+        newSafe = set()
+        newDanger = set()
 
-        if not percept[PERCEPT.STENCH] and not percept[PERCEPT.BREEZE]:
+        if percept[PERCEPT.BREEZE] or percept[PERCEPT.STENCH]:
+            self.__doubt |= neighbors
+        else:
             self.__doubt -= {(x, y)}
-            nSafe |= nCell
-        else:
-            self.__doubt |= nCell
+            newSafe |= neighbors
 
-        fringe = self.__doubt.copy()
-        if self.__nbVisited > 1:
-            for p in fringe:
-                c1, c2 = pos2num(p[0], p[1], "P"), pos2num(p[0], p[1], "W")
-                if self.__kb.ask([c1, c2]):  # P | W
-                    nDanger.add(p)
-                    self.__doubt.remove(p)
-                elif self.__kb.ask([[-c1], [-c2]]):  #!P & !W
-                    nSafe.add(p)
-                    self.__doubt.remove(p)
+        doubt = self.__doubt.copy()
+        for p in doubt:
+            c1, c2 = pos2num(p[0], p[1], "P"), pos2num(p[0], p[1], "W")
+            if self.__kb.ask(c1):  # Pit
+                newDanger.add(p)
+                self.__doubt.remove(p)
+            elif self.__kb.ask(c2):  # Wumpus
+                newSafe.add(p)
+                self.__doubt.remove(p)
+                # TODO
+                nd = DIRECTION.POS2DIR[(p[0] - self.__x, p[1] - self.__y)]
+                if nd != self.__dir:
+                    self.__actionQueue.append(ACTION.ROTATE + nd)
+                    self.__dir = nd
+                self.__actionQueue.append(ACTION.SHOOT)
+            elif self.__kb.ask([[-c1], [-c2]]):
+                newSafe.add(p)
+                self.__doubt.remove(p)
 
-        if len(nSafe) > 0:
-            self.__safe |= nSafe
-        if len(nDanger) > 0:
-            self.__danger |= nDanger
+        if len(newSafe) > 0:
+            self.__safe |= newSafe
+        if len(newDanger) > 0:
+            self.__danger |= newDanger
 
-    def __newActions(self):
+    def __planning(self):
+        # TODO no more safe
         if len(self.__safe) > 0:
-            src = self.__safe
-        elif len(self.__doubt) > 0:
-            src = self.__doubt
-        else:
-            src = self.__danger
-        goal = src.pop()
-        self.__actionQueue = self.__path2actions(self.__bfs(goal))
-        return self.__actionQueue.pop()
+            safeList = sorted(
+                list(self.__safe),
+                key=lambda pos: abs(pos[0] - self.__x) + abs(pos[1] - self.__y),
+                reverse=True,
+            )
+            self.__actionQueue = self.__path2actions(self.__bfs(safeList.pop()))
+            self.__safe = set(safeList)
+            return self.__actionQueue.pop()
 
     def __bfs(self, goal):
         explored = np.full((self.__info.size, self.__info.size), False)
