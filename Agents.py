@@ -26,7 +26,8 @@ class Agent:
         self.__visited[self.__x][self.__y] = True
         self.__safe = set(self.__info.getNeighbors(self.__x, self.__y))
         self.__doubt = set()
-        self.__danger = set()
+        self.__pit = set()
+        self.__wum = []
 
     def startGame(self, debug=True):
         if self.__alive:
@@ -43,7 +44,7 @@ class Agent:
                     print("Dir:\t", self.__dir)
                     print("Safe:\t", self.__safe)
                     print("Doubt:\t", self.__doubt)
-                    print("Danger:\t", self.__danger)
+                    print("Pit:\t", self.__pit)
                     print("Action:\t", action)
                     print("ActionQ:\t", self.__actionQueue)
                 else:
@@ -58,7 +59,7 @@ class Agent:
         elif action == ACTION.FOWARD:
             dx, dy = DIRECTION.DIR2POS[self.__dir]
             self.__x, self.__y = nx, ny = self.__x + dx, self.__y + dy
-
+            self.__MGK()
             if not self.__visited[nx][ny]:
                 self.__visited[nx][ny] = True
                 percept = self.__world.getPercept(nx, ny)
@@ -79,6 +80,29 @@ class Agent:
                     print("Tell kb:", knowStr[:-3])
                 self.__explore(nx, ny, percept)
 
+    def __MGK(self):
+        x, y = self.__x, self.__y
+        deadWum = np.full((len(self.__wum),), False)
+        for idx, ix, iy in enumerate(self.__wum):
+            if y == iy:
+                deadWum[idx] = True
+                if x < ix:
+                    self.__actionQueue.append(ACTION.RRIGHT)
+                elif ix < x:
+                    self.__actionQueue.append(ACTION.RLEFT)
+                self.__actionQueue.append(ACTION.SHOOT)
+            elif x == ix:
+                deadWum[idx] = True
+                if y < iy:
+                    self.__actionQueue.append(ACTION.RUP)
+                elif iy < y:
+                    self.__actionQueue.append(ACTION.RDOWN)
+                self.__actionQueue.append(ACTION.SHOOT)
+        newWum = [self.__wum[i] for i in range(len(self.__wum)) if not deadWum[i]]
+        if len(newWum) < len(self.__wum):
+            self.__actionQueue.append(ACTION.ROTATE + self.__dir)
+            self.__wum = newWum
+
     def __explore(self, x, y, percept):
         neighbors = (
             set(
@@ -89,10 +113,11 @@ class Agent:
                 ]
             )
             - self.__safe
-            - self.__danger
+            - self.__pit
+            - set(self.__wum)
         )
         newSafe = set()
-        newDanger = set()
+        newPit = set()
 
         if percept[PERCEPT.BREEZE] or percept[PERCEPT.STENCH]:
             self.__doubt |= neighbors
@@ -104,28 +129,21 @@ class Agent:
         for p in doubt:
             c1, c2 = pos2num(p[0], p[1], "P"), pos2num(p[0], p[1], "W")
             if self.__kb.ask(c1):  # Pit
-                newDanger.add(p)
+                newPit.add(p)
                 self.__doubt.remove(p)
             elif self.__kb.ask(c2):  # Wumpus
-                newSafe.add(p)
+                self.__wum.append(p)
                 self.__doubt.remove(p)
-                # TODO
-                nd = DIRECTION.POS2DIR[(p[0] - self.__x, p[1] - self.__y)]
-                if nd != self.__dir:
-                    self.__actionQueue.append(ACTION.ROTATE + nd)
-                    self.__dir = nd
-                self.__actionQueue.append(ACTION.SHOOT)
             elif self.__kb.ask([[-c1], [-c2]]):
                 newSafe.add(p)
                 self.__doubt.remove(p)
 
         if len(newSafe) > 0:
             self.__safe |= newSafe
-        if len(newDanger) > 0:
-            self.__danger |= newDanger
+        if len(newPit) > 0:
+            self.__pit |= newPit
 
     def __planning(self):
-        # TODO no more safe
         if len(self.__safe) > 0:
             safeList = sorted(
                 list(self.__safe),
@@ -135,6 +153,7 @@ class Agent:
             self.__actionQueue = self.__path2actions(self.__bfs(safeList.pop()))
             self.__safe = set(safeList)
             return self.__actionQueue.pop()
+        # TODO no more safe: comback and out
 
     def __bfs(self, goal):
         explored = np.full((self.__info.size, self.__info.size), False)

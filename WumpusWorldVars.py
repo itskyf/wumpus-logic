@@ -20,6 +20,7 @@ class ACTION:
     RUP = "ru"
     RDOWN = "rd"
     SHOOT = "s"
+    OUT = "o"
 
 
 class DIRECTION:
