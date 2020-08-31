@@ -46,7 +46,7 @@ class Agent:
                     print("Doubt:\t", self.__doubt)
                     print("Pit:\t", self.__pit)
                     print("Action:\t", action)
-                    print("ActionQ:\t", self.__actionQueue)
+                    print("ActionQ:", self.__actionQueue)
                 else:
                     print("Rotate:\t", self.__dir)
 
@@ -83,21 +83,21 @@ class Agent:
     def __MGK(self):
         x, y = self.__x, self.__y
         deadWum = np.full((len(self.__wum),), False)
-        for idx, ix, iy in enumerate(self.__wum):
+        for idx, (ix, iy) in enumerate(self.__wum):
             if y == iy:
                 deadWum[idx] = True
+                self.__actionQueue.append(ACTION.SHOOT)
                 if x < ix:
                     self.__actionQueue.append(ACTION.RRIGHT)
                 elif ix < x:
                     self.__actionQueue.append(ACTION.RLEFT)
-                self.__actionQueue.append(ACTION.SHOOT)
             elif x == ix:
                 deadWum[idx] = True
+                self.__actionQueue.append(ACTION.SHOOT)
                 if y < iy:
                     self.__actionQueue.append(ACTION.RUP)
                 elif iy < y:
                     self.__actionQueue.append(ACTION.RDOWN)
-                self.__actionQueue.append(ACTION.SHOOT)
         newWum = [self.__wum[i] for i in range(len(self.__wum)) if not deadWum[i]]
         if len(newWum) < len(self.__wum):
             self.__actionQueue.append(ACTION.ROTATE + self.__dir)
@@ -134,7 +134,7 @@ class Agent:
             elif self.__kb.ask(c2):  # Wumpus
                 self.__wum.append(p)
                 self.__doubt.remove(p)
-            elif self.__kb.ask([[-c1], [-c2]]):
+            elif self.__kb.ask(-c1) and self.__kb.ask(-c2):  # ~P & ~W
                 newSafe.add(p)
                 self.__doubt.remove(p)
 

@@ -18,12 +18,11 @@ class KB_PL:
     def tell(self, sentence):
         self.__solver.append_formula(sentence)
 
-    def ask(self, sentence):
-        neg = KB_PL.__negate(sentence)
-        for clause in neg:
-            if self.__solver.solve(assumptions=clause) == False:
-                return True
-        return False
+    def ask(self, symbol):
+        res = self.__solver.solve(assumptions=[-symbol])
+        if res != None:
+            return not res
+        return None
 
     def __initClauses(self, c1, c2):
         cnf_clauses = []
@@ -34,13 +33,6 @@ class KB_PL:
                 rhs = [pos2num(ix, iy, c2) for ix, iy in self.__info.getNeighbors(x, y)]
                 cnf_clauses += KB_PL.biconditional2cnf(lhs, rhs)
         return cnf_clauses
-
-    @staticmethod
-    def __negate(sentence):
-        if isinstance(sentence, int):
-            return [[-sentence]]
-        neg = -np.array(list(product(*sentence)))
-        return neg.tolist()
 
     @staticmethod
     def biconditional2cnf(lhs: int, rhs: list):

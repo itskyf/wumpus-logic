@@ -12,7 +12,7 @@ from WumpusWorldVars import GAMEINFO
 
 if __name__ == "__main__":
     gui = tk.Tk()
-    ginfo = GAMEINFO("4x4.txt")
+    ginfo = GAMEINFO("map6.txt")
     world = WumpusWorld(gui, ginfo)
     agent = Agent(world)
 
